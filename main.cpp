@@ -89,12 +89,12 @@ void printGraph(struct Graph* graph)
 	}
 }
 
-void calcDensity(int num_edges, int num_vertices, double* density)
+inline void calcDensity(int num_edges, int num_vertices, double* density)
 {
 		*density = (double) num_edges/  (double) num_vertices;
 }
 
-void assignToTilde(struct Graph* graph, struct GraphTilde* graph_tilde)
+inline void assignToTilde(struct Graph* graph, struct GraphTilde* graph_tilde)
 {
 	graph_tilde->V = graph->V;
 	graph_tilde->E = graph->E;
@@ -188,7 +188,7 @@ int main()
 		}
 	}
 
-	rho_init = (double) graph->E/ (double) NO_OF_VERTICES;
+	calcDensity(graph->E, NO_OF_VERTICES, &rho_init);
 
 //	printGraph(graph);
 
