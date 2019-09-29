@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <chrono>
 
 using namespace std;
 
@@ -120,10 +121,11 @@ void densestComponent(struct Graph* graph, double rho_init)
 
 	int target_element;
 	double current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
+	bool isTildeChanged = false;
 
 	while (graph->V > 0) {
 		for (int v = 0; v < NO_OF_VERTICES; v++) {
-			if ((graph_tilde->V_arr[v] != -1) && (graph->degrees[v] < approxFactor(EPSILON) * current_graph_rho)) {
+			if ((graph_tilde->V_arr[v] != -1) && (graph->degrees[v] <= approxFactor(EPSILON) * current_graph_rho)) {
 				graph_tilde->V_arr[v] = -1;
 				graph->V--;
 				for (int v_v = 0; v_v < graph->capacities[v]; v_v++) {
@@ -144,10 +146,15 @@ void densestComponent(struct Graph* graph, double rho_init)
 			}
 		}
 		calcDensity(graph->E, graph->V, &current_graph_rho);
-		calcDensity(graph_tilde->E, graph_tilde->V, &current_graphTilde_rho);
+
+		if (isTildeChanged) {
+			calcDensity(graph_tilde->E, graph_tilde->V, &current_graphTilde_rho);
+			isTildeChanged = false;
+		}
 
 		if (current_graph_rho > current_graphTilde_rho) {
 			assignToTilde(graph, graph_tilde);
+			isTildeChanged = true;
 		}
 	}
 
@@ -195,7 +202,13 @@ int main()
 	cout << "#Edges:" << graph->E << endl;
 	cout << "Initial Density:" << rho_init << endl;
 
+	auto start = chrono::steady_clock::now();
 	densestComponent(graph, rho_init);
+	auto end = chrono::steady_clock::now();
+
+	cout << "Elapsed time in nanoseconds : "
+			 << chrono::duration_cast<chrono::nanoseconds>(end - start).count()
+			 << " ns" << endl;
 
 	deallocateGraph(graph);
 
