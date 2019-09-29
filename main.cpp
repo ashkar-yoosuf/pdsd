@@ -121,7 +121,7 @@ void densestComponent(struct Graph* graph, double rho_init)
 
 	int target_element;
 	double current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
-	bool isTildeChanged = false;
+	bool isTildeChanged {false};
 
 	while (graph->V > 0) {
 		for (int v = 0; v < NO_OF_VERTICES; v++) {
