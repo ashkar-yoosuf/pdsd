@@ -13,16 +13,18 @@ struct Graph
 {
 	int V;
 	int E;
+	int flag;
+	int** flags;
 	int** arrayOfArrays;
 	int* degrees;
 	int* capacities;
+	int *failed_V_arr;
 };
 
 struct GraphTilde
 {
-	int V{};
-	int E{};
-	int V_arr[NO_OF_VERTICES] = {};
+	int V;
+	int E;
 };
 
 void push(int **arr, int index, int value, int *size, int *capacity)
@@ -54,8 +56,13 @@ struct Graph* createGraph()
 
 	graph->E = 0;
 
+	graph->flag = -1;
+
 	graph->arrayOfArrays =
 			(int **) malloc(NO_OF_VERTICES * sizeof(*(graph->arrayOfArrays)));
+
+	graph->flags =
+			(int **) malloc(NO_OF_VERTICES * sizeof(*(graph->flags)));
 
 	graph->degrees =
 			(int *) malloc(NO_OF_VERTICES * sizeof(*(graph->degrees)));
@@ -63,12 +70,29 @@ struct Graph* createGraph()
 	graph->capacities =
 			(int *) malloc(NO_OF_VERTICES * sizeof(*(graph->capacities)));
 
+
+	graph->failed_V_arr =
+			(int *) malloc(NO_OF_VERTICES* sizeof(int));
+
 	int i;
 	for (i = 0; i < NO_OF_VERTICES; ++i) {
 		graph->degrees[i] = 0;
 		graph->capacities[i] = 0;
+		graph->failed_V_arr[i] = 0;
 	}
 	return graph;
+}
+
+struct GraphTilde* createGraphTilde(struct Graph* graph)
+{
+	auto* graph_tilde =
+			(struct GraphTilde*) malloc(sizeof(struct GraphTilde));
+
+	graph_tilde->V = NO_OF_VERTICES;
+
+	graph_tilde->E = graph->E;
+
+	return graph_tilde;
 }
 
 void printGraph(struct Graph* graph)
@@ -82,9 +106,9 @@ void printGraph(struct Graph* graph)
 			for (int i = 0; i < p_graph->capacities[v]; ++i)
 			{
 				if (i != p_graph->capacities[v] - 1)
-					cout << p_graph->arrayOfArrays[v][i] << ",";
+					cout << p_graph->flags[v][i] << ",";
 				else
-					cout << p_graph->arrayOfArrays[v][i] << "] | degree: " << p_graph->degrees[v] << endl;
+					cout << p_graph->flags[v][i] << "] | degree: " << p_graph->degrees[v] << endl;
 			}
 		}
 	}
@@ -92,7 +116,7 @@ void printGraph(struct Graph* graph)
 
 inline void calcDensity(int num_edges, int num_vertices, double* density)
 {
-		*density = (double) num_edges/  (double) num_vertices;
+	*density = (double) num_edges/  (double) num_vertices;
 }
 
 inline void assignToTilde(struct Graph* graph, struct GraphTilde* graph_tilde)
@@ -110,36 +134,53 @@ void deallocateGraph(struct Graph* graph)
 	free (graph->degrees);
 	free (graph->capacities);
 	free (graph->arrayOfArrays);
+	free (graph->flags);
+	free (graph->failed_V_arr);
 	free (graph);
 }
 
-void densestComponent(struct Graph* graph, double rho_init)
+void deallocateGraphTilde(struct GraphTilde* graph_tilde)
 {
-	auto* graph_tilde = (struct GraphTilde *) malloc(sizeof(struct GraphTilde));
-	graph_tilde->V = NO_OF_VERTICES;
-	graph_tilde->E = graph->E;
+	free (graph_tilde);
+}
 
-	int target_element;
+void init_vertexFlags(struct Graph* graph)
+{
+	for (int v = 0; v < NO_OF_VERTICES; v++) {
+		graph->flags[v] = new int[graph->capacities[v]];
+
+		for (int i = 0; i < graph->capacities[v]; i++) {
+			graph->flags[v][i] = 0;
+		}
+	}
+}
+
+void maxDensity(struct Graph* graph, double rho_init)
+{
+	struct GraphTilde* graph_tilde = createGraphTilde(graph);
+
+	int target_element, flagOf_target_element;
 	double current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
 	bool isTildeChanged {false};
 
 	while (graph->V > 0) {
 		for (int v = 0; v < NO_OF_VERTICES; v++) {
-			if ((graph_tilde->V_arr[v] != -1) && (graph->degrees[v] <= approxFactor(EPSILON) * current_graph_rho)) {
-				graph_tilde->V_arr[v] = -1;
+			if ((graph->failed_V_arr[v] == 0) && (graph->degrees[v] <= approxFactor(EPSILON) * current_graph_rho)) {
+				graph->failed_V_arr[v] = graph->flag;
 				graph->V--;
 				for (int v_v = 0; v_v < graph->capacities[v]; v_v++) {
 					target_element = graph->arrayOfArrays[v][v_v];
-					if (target_element != -1) {
+					flagOf_target_element = graph->flags[v][v_v];
+					if (flagOf_target_element == 0) {
 						for (int u_u = 0; u_u < graph->capacities[target_element]; u_u++) {
 							if (graph->arrayOfArrays[target_element][u_u] == v) {
-								graph->arrayOfArrays[target_element][u_u] = -1;
+								graph->flags[target_element][u_u] = graph->flag;
 								graph->E--;
 								break;
 							}
 						}
 						graph->degrees[target_element]--;
-						graph->arrayOfArrays[v][v_v] = -1;
+						graph->flags[v][v_v] = graph->flag;
 					}
 				}
 				graph->degrees[v] = 0;
@@ -154,13 +195,30 @@ void densestComponent(struct Graph* graph, double rho_init)
 
 		if (current_graph_rho > current_graphTilde_rho) {
 			assignToTilde(graph, graph_tilde);
+			graph->flag--;
 			isTildeChanged = true;
 		}
 	}
 
 	cout << "Density of the densest component: " << current_graphTilde_rho << endl;
 
-	free(graph_tilde);
+	deallocateGraphTilde(graph_tilde);
+}
+
+void densestComponent(struct Graph* graph) {
+	struct Graph *d_graph = graph;
+
+	for (int v = 0; v < NO_OF_VERTICES; v++) {
+		if (graph->failed_V_arr[v] == graph->flag) {
+			cout << "[" << v << "] --> |";
+			for (int i = 0; i < d_graph->capacities[v]; ++i) {
+				if (d_graph->flags[v][i] == d_graph->flag) {
+					cout << d_graph->arrayOfArrays[v][i] << "|";
+				}
+			}
+			cout << endl;
+		}
+	}
 }
 
 int main()
@@ -196,19 +254,19 @@ int main()
 	}
 
 	calcDensity(graph->E, NO_OF_VERTICES, &rho_init);
+	init_vertexFlags(graph);
 
-//	printGraph(graph);
-
-	cout << "#Edges:" << graph->E << endl;
 	cout << "Initial Density:" << rho_init << endl;
 
 	auto start = chrono::steady_clock::now();
-	densestComponent(graph, rho_init);
+	maxDensity(graph, rho_init);
 	auto end = chrono::steady_clock::now();
 
 	cout << "Elapsed time in nanoseconds : "
 			 << chrono::duration_cast<chrono::nanoseconds>(end - start).count()
 			 << " ns" << endl;
+
+	densestComponent(graph);
 
 	deallocateGraph(graph);
 
