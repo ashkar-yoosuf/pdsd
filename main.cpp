@@ -5,7 +5,7 @@
 
 using namespace std;
 
-#define NO_OF_VERTICES 12008
+#define NO_OF_VERTICES 4039
 #define EPSILON 0.1
 #define approxFactor(EPSILON) (2 + 2 * EPSILON)
 
@@ -27,44 +27,39 @@ struct GraphTilde
 	int E;
 };
 
-void push(int **arr, int index, int value, int *degree, int *capacity, int same_node, bool first)
-{
+inline void edgeMemAlloc(int **arr, int index, int value, int *degree, int *capacity) {
+
+	if (*capacity != 0) {
+		*arr = (int *) realloc(*arr, ((*capacity + 1) * sizeof(int)));
+	} else {
+		*arr = (int *) malloc(sizeof(int));
+	}
+
+	*capacity = (*capacity + 1);
+	(*arr)[index] = value;
+	*degree = *degree + 1;
+
+}
+
+inline void push(int **arr, int index, int value, int *degree, int *capacity, int same_node, bool first) {
+
 	if (same_node) {
 
 		if (first) {
-
-			if (*capacity != 0) {
-				*arr = (int *) realloc(*arr, ((*capacity + 1) * sizeof(int)));
-			} else {
-				*arr = (int *) malloc(sizeof(int));
-			}
-			*capacity = (*capacity + 1);
-			(*arr)[index] = value;
-			*degree = *degree + 1;
-
+			edgeMemAlloc(arr, index, value, degree, capacity);
 		} else {
-
 			*degree = *degree + 1;
-
 		}
 
 	} else {
-
-		if (*capacity != 0) {
-			*arr = (int *) realloc(*arr, ((*capacity + 1) * sizeof(int)));
-		} else {
-			*arr = (int *) malloc(sizeof(int));
-		}
-		*capacity = (*capacity + 1);
-		(*arr)[index] = value;
-		*degree = *degree + 1;
-
+		edgeMemAlloc(arr, index, value, degree, capacity);
 	}
 }
 
-void addEdge(struct Graph* graph, int src, int dest)
-{
+void addEdge(struct Graph* graph, int src, int dest) {
+
 	bool same_node { false };
+
 	if (src == dest)
 		same_node = true;
 
@@ -72,10 +67,11 @@ void addEdge(struct Graph* graph, int src, int dest)
 			&(graph->capacities[src]), same_node, true);
 	push(&(graph->arrayOfArrays[dest]), graph->capacities[dest], src, &(graph->degrees[dest]),
 			&(graph->capacities[dest]), same_node, false);
+
 }
 
-struct Graph* createGraph()
-{
+struct Graph* createGraph() {
+
 	auto* graph =
 			(struct Graph*) malloc(sizeof(struct Graph));
 
@@ -108,10 +104,11 @@ struct Graph* createGraph()
 		graph->failed_V_arr[i] = 0;
 	}
 	return graph;
+
 }
 
-struct GraphTilde* createGraphTilde(struct Graph* graph)
-{
+struct GraphTilde* createGraphTilde(struct Graph* graph) {
+
 	auto* graph_tilde =
 			(struct GraphTilde*) malloc(sizeof(struct GraphTilde));
 
@@ -120,10 +117,11 @@ struct GraphTilde* createGraphTilde(struct Graph* graph)
 	graph_tilde->E = graph->E;
 
 	return graph_tilde;
+
 }
 
-void printGraph(struct Graph* graph)
-{
+void printGraph(struct Graph* graph) {
+
 	for (int v = 0; v < NO_OF_VERTICES; ++v)
 	{
 		if (graph->capacities[v] != 0)
@@ -140,19 +138,21 @@ void printGraph(struct Graph* graph)
 	}
 }
 
-inline void calcDensity(int num_edges, int num_vertices, float* density)
-{
+inline void calcDensity(int num_edges, int num_vertices, float* density) {
+
 	*density = (double) num_edges/  (double) num_vertices;
+
 }
 
-inline void assignToTilde(struct Graph* graph, struct GraphTilde* graph_tilde)
-{
+inline void assignToTilde(struct Graph* graph, struct GraphTilde* graph_tilde) {
+
 	graph_tilde->V = graph->V;
 	graph_tilde->E = graph->E;
+
 }
 
-void deallocateGraph(struct Graph* graph)
-{
+void deallocateGraph(struct Graph* graph) {
+
 	for (int i = 0; i < NO_OF_VERTICES; ++i)
 	{
 		free(graph->arrayOfArrays[i]);
@@ -163,15 +163,17 @@ void deallocateGraph(struct Graph* graph)
 	free (graph->flags);
 	free (graph->failed_V_arr);
 	free (graph);
+
 }
 
-inline void deallocateGraphTilde(struct GraphTilde* graph_tilde)
-{
+inline void deallocateGraphTilde(struct GraphTilde* graph_tilde) {
+
 	free (graph_tilde);
+
 }
 
-void init_vertexFlags(struct Graph* graph)
-{
+void init_vertexFlags(struct Graph* graph) {
+
 	for (int v = 0; v < NO_OF_VERTICES; v++) {
 		graph->flags[v] = new int[graph->capacities[v]];
 
@@ -181,8 +183,24 @@ void init_vertexFlags(struct Graph* graph)
 	}
 }
 
-float maxDensity(struct Graph* graph, double rho_init)
-{
+inline void removeEdge(struct Graph* graph, int degree_reduction, int target_element, int flagOf_target_element, int v, int v_v) {
+
+	if (flagOf_target_element == 0) {
+		for (int u_u = 0; u_u < graph->capacities[target_element]; u_u++) {
+			if (graph->arrayOfArrays[target_element][u_u] == v) {
+				graph->flags[target_element][u_u] = graph->flag;
+				graph->E--;
+				break;
+			}
+		}
+		graph->degrees[target_element] -= degree_reduction;
+		graph->flags[v][v_v] = graph->flag;
+	}
+
+}
+
+float maxDensity(struct Graph* graph, double rho_init) {
+
 	struct GraphTilde* graph_tilde = createGraphTilde(graph);
 
 	int target_element, flagOf_target_element;
@@ -194,34 +212,18 @@ float maxDensity(struct Graph* graph, double rho_init)
 			if ((graph->failed_V_arr[v] == 0) && (graph->degrees[v] <= approxFactor(EPSILON) * current_graph_rho)) {
 				graph->failed_V_arr[v] = graph->flag;
 				graph->V--;
+
 				for (int v_v = 0; v_v < graph->capacities[v]; v_v++) {
+
 					target_element = graph->arrayOfArrays[v][v_v];
 					flagOf_target_element = graph->flags[v][v_v];
+
 					if (target_element != v) {
-						if (flagOf_target_element == 0) {
-							for (int u_u = 0; u_u < graph->capacities[target_element]; u_u++) {
-								if (graph->arrayOfArrays[target_element][u_u] == v) {
-									graph->flags[target_element][u_u] = graph->flag;
-									graph->E--;
-									break;
-								}
-							}
-							graph->degrees[target_element]--;
-							graph->flags[v][v_v] = graph->flag;
-						}
+						removeEdge(graph, 1, target_element, flagOf_target_element, v, v_v);
 					} else {
-						if (flagOf_target_element == 0) {
-							for (int u_u = 0; u_u < graph->capacities[target_element]; u_u++) {
-								if (graph->arrayOfArrays[target_element][u_u] == v) {
-									graph->flags[target_element][u_u] = graph->flag;
-									graph->E--;
-									break;
-								}
-							}
-							graph->degrees[target_element] -= 2;
-							graph->flags[v][v_v] = graph->flag;
-						}
+						removeEdge(graph, 2, target_element, flagOf_target_element, v, v_v);
 					}
+
 				}
 				graph->degrees[v] = 0;
 			}
@@ -243,6 +245,7 @@ float maxDensity(struct Graph* graph, double rho_init)
 	deallocateGraphTilde(graph_tilde);
 
 	return current_graphTilde_rho;
+
 }
 
 void densestComponent(struct Graph* graph) {
@@ -272,11 +275,12 @@ int densestComponentVertices(struct Graph* graph) {
 	}
 
 	return dense_nodes;
+
 }
 
-int main()
-{
-	freopen("./output/ca-HepPh-new(0.1).txt", "w", stdout);
+int main() {
+
+	freopen("./output/facebook_combined(0.1).txt", "w", stdout);
 
 	double avg_elapsed_time = 0;
 	float rho_init, max_density = 0;
@@ -284,7 +288,7 @@ int main()
 
 	for (int turn = 0; turn < 5; turn++) {
 
-		ifstream ip("./input/ca-HepPh-new.csv");
+		ifstream ip("./input/facebook_combined.csv");
 
 		struct Graph* graph = createGraph();
 
@@ -346,4 +350,5 @@ int main()
 			 << "---------------------------------------" << endl;
 
 	exit(0);
+
 }
