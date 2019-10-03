@@ -486,5 +486,5 @@ DENSEST COMPONENT
 ---------------------------------------
 Number of nodes in densest component: 239
 Density of densest component: 119.004
-Average Elapsed time in microseconds : 159983 ms
+Average Elapsed time in microseconds : 146887 μs
 ---------------------------------------
