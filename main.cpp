@@ -5,8 +5,8 @@
 
 using namespace std;
 
-#define NO_OF_VERTICES 9877
-#define EPSILON 0.00001
+#define NO_OF_VERTICES 12008
+#define EPSILON 0.1
 #define approxFactor(EPSILON) (2 + 2 * EPSILON)
 
 struct Graph
@@ -276,7 +276,7 @@ int densestComponentVertices(struct Graph* graph) {
 
 int main()
 {
-	freopen("./output/ca-HepTh-new(0.00001).txt", "w", stdout);
+	freopen("./output/ca-HepPh-new(0.1).txt", "w", stdout);
 
 	double avg_elapsed_time = 0;
 	float rho_init, max_density = 0;
@@ -284,7 +284,7 @@ int main()
 
 	for (int turn = 0; turn < 5; turn++) {
 
-		ifstream ip("./input/ca-HepTh-new.csv");
+		ifstream ip("./input/ca-HepPh-new.csv");
 
 		struct Graph* graph = createGraph();
 
@@ -342,7 +342,7 @@ int main()
 	cout << "---------------------------------------" << endl
 			 << "Number of nodes in densest component: " << dense_nodes << endl
 			 << "Density of densest component: " << max_density << endl
-	     << "Average Elapsed time in microseconds : " << avg_elapsed_time << " ms" << endl
+	     << "Average Elapsed time in microseconds : " << avg_elapsed_time << " μs" << endl
 			 << "---------------------------------------" << endl;
 
 	exit(0);
