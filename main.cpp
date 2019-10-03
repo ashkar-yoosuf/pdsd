@@ -5,8 +5,8 @@
 
 using namespace std;
 
-#define NO_OF_VERTICES 4039
-#define EPSILON 0.5
+#define NO_OF_VERTICES 9877
+#define EPSILON 0.00001
 #define approxFactor(EPSILON) (2 + 2 * EPSILON)
 
 struct Graph
@@ -18,7 +18,7 @@ struct Graph
 	int** arrayOfArrays;
 	int* degrees;
 	int* capacities;
-	int *failed_V_arr;
+	int* failed_V_arr;
 };
 
 struct GraphTilde
@@ -27,24 +27,51 @@ struct GraphTilde
 	int E;
 };
 
-void push(int **arr, int index, int value, int *size, int *capacity)
+void push(int **arr, int index, int value, int *degree, int *capacity, int same_node, bool first)
 {
-	if (*capacity != 0) {
-		*arr = (int *) realloc(*arr, ((*size + 1) * sizeof(int)));
+	if (same_node) {
+
+		if (first) {
+
+			if (*capacity != 0) {
+				*arr = (int *) realloc(*arr, ((*capacity + 1) * sizeof(int)));
+			} else {
+				*arr = (int *) malloc(sizeof(int));
+			}
+			*capacity = (*capacity + 1);
+			(*arr)[index] = value;
+			*degree = *degree + 1;
+
+		} else {
+
+			*degree = *degree + 1;
+
+		}
+
 	} else {
-		*arr = (int *) malloc(sizeof(int));
+
+		if (*capacity != 0) {
+			*arr = (int *) realloc(*arr, ((*capacity + 1) * sizeof(int)));
+		} else {
+			*arr = (int *) malloc(sizeof(int));
+		}
+		*capacity = (*capacity + 1);
+		(*arr)[index] = value;
+		*degree = *degree + 1;
+
 	}
-	*capacity = (*size + 1);
-	(*arr)[index] = value;
-	*size = *size + 1;
 }
 
 void addEdge(struct Graph* graph, int src, int dest)
 {
-	push(&(graph->arrayOfArrays[src]), graph->degrees[src], dest, &(graph->degrees[src]), &(graph->capacities[src]));
+	bool same_node { false };
+	if (src == dest)
+		same_node = true;
 
-	push(&(graph->arrayOfArrays[dest]), graph->degrees[dest], src, &(graph->degrees[dest]), &(graph->capacities[dest]));
-
+	push(&(graph->arrayOfArrays[src]), graph->capacities[src], dest, &(graph->degrees[src]),
+			&(graph->capacities[src]), same_node, true);
+	push(&(graph->arrayOfArrays[dest]), graph->capacities[dest], src, &(graph->degrees[dest]),
+			&(graph->capacities[dest]), same_node, false);
 }
 
 struct Graph* createGraph()
@@ -97,24 +124,23 @@ struct GraphTilde* createGraphTilde(struct Graph* graph)
 
 void printGraph(struct Graph* graph)
 {
-	struct Graph* p_graph = graph;
 	for (int v = 0; v < NO_OF_VERTICES; ++v)
 	{
-		if (p_graph->capacities[v] != 0)
+		if (graph->capacities[v] != 0)
 		{
 			cout << "[" << v << "] --> [";
-			for (int i = 0; i < p_graph->capacities[v]; ++i)
+			for (int i = 0; i < graph->capacities[v]; ++i)
 			{
-				if (i != p_graph->capacities[v] - 1)
-					cout << p_graph->flags[v][i] << ",";
+				if (i != graph->capacities[v] - 1)
+					cout << graph->arrayOfArrays[v][i] << ",";
 				else
-					cout << p_graph->flags[v][i] << "] | degree: " << p_graph->degrees[v] << endl;
+					cout << graph->arrayOfArrays[v][i] << "] | degree: " << graph->degrees[v] << endl;
 			}
 		}
 	}
 }
 
-inline void calcDensity(int num_edges, int num_vertices, double* density)
+inline void calcDensity(int num_edges, int num_vertices, float* density)
 {
 	*density = (double) num_edges/  (double) num_vertices;
 }
@@ -139,7 +165,7 @@ void deallocateGraph(struct Graph* graph)
 	free (graph);
 }
 
-void deallocateGraphTilde(struct GraphTilde* graph_tilde)
+inline void deallocateGraphTilde(struct GraphTilde* graph_tilde)
 {
 	free (graph_tilde);
 }
@@ -155,12 +181,12 @@ void init_vertexFlags(struct Graph* graph)
 	}
 }
 
-void maxDensity(struct Graph* graph, double rho_init)
+float maxDensity(struct Graph* graph, double rho_init)
 {
 	struct GraphTilde* graph_tilde = createGraphTilde(graph);
 
 	int target_element, flagOf_target_element;
-	double current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
+	float current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
 	bool isTildeChanged {false};
 
 	while (graph->V > 0) {
@@ -171,16 +197,30 @@ void maxDensity(struct Graph* graph, double rho_init)
 				for (int v_v = 0; v_v < graph->capacities[v]; v_v++) {
 					target_element = graph->arrayOfArrays[v][v_v];
 					flagOf_target_element = graph->flags[v][v_v];
-					if (flagOf_target_element == 0) {
-						for (int u_u = 0; u_u < graph->capacities[target_element]; u_u++) {
-							if (graph->arrayOfArrays[target_element][u_u] == v) {
-								graph->flags[target_element][u_u] = graph->flag;
-								graph->E--;
-								break;
+					if (target_element != v) {
+						if (flagOf_target_element == 0) {
+							for (int u_u = 0; u_u < graph->capacities[target_element]; u_u++) {
+								if (graph->arrayOfArrays[target_element][u_u] == v) {
+									graph->flags[target_element][u_u] = graph->flag;
+									graph->E--;
+									break;
+								}
 							}
+							graph->degrees[target_element]--;
+							graph->flags[v][v_v] = graph->flag;
 						}
-						graph->degrees[target_element]--;
-						graph->flags[v][v_v] = graph->flag;
+					} else {
+						if (flagOf_target_element == 0) {
+							for (int u_u = 0; u_u < graph->capacities[target_element]; u_u++) {
+								if (graph->arrayOfArrays[target_element][u_u] == v) {
+									graph->flags[target_element][u_u] = graph->flag;
+									graph->E--;
+									break;
+								}
+							}
+							graph->degrees[target_element] -= 2;
+							graph->flags[v][v_v] = graph->flag;
+						}
 					}
 				}
 				graph->degrees[v] = 0;
@@ -200,76 +240,110 @@ void maxDensity(struct Graph* graph, double rho_init)
 		}
 	}
 
-	cout << "Density of the densest component: " << current_graphTilde_rho << endl;
-
 	deallocateGraphTilde(graph_tilde);
+
+	return current_graphTilde_rho;
 }
 
 void densestComponent(struct Graph* graph) {
-	struct Graph *d_graph = graph;
 
 	for (int v = 0; v < NO_OF_VERTICES; v++) {
 		if (graph->failed_V_arr[v] == graph->flag) {
 			cout << "[" << v << "] --> |";
-			for (int i = 0; i < d_graph->capacities[v]; ++i) {
-				if (d_graph->flags[v][i] == d_graph->flag) {
-					cout << d_graph->arrayOfArrays[v][i] << "|";
+			for (int i = 0; i < graph->capacities[v]; ++i) {
+				if (graph->flags[v][i] == graph->flag) {
+					cout << graph->arrayOfArrays[v][i] << "|";
 				}
 			}
 			cout << endl;
 		}
 	}
+
+}
+
+int densestComponentVertices(struct Graph* graph) {
+
+	int dense_nodes = 0;
+	for (int v = 0; v < NO_OF_VERTICES; v++) {
+		if (graph->failed_V_arr[v] == graph->flag) {
+			dense_nodes++;
+			cout << v << endl;
+		}
+	}
+
+	return dense_nodes;
 }
 
 int main()
 {
-	double rho_init;
-	struct Graph* graph = createGraph();
-	ifstream ip("./input/facebook_combined.csv");
+	freopen("./output/ca-HepTh-new(0.00001).txt", "w", stdout);
 
-	string node_1;
-	string node_2;
+	double avg_elapsed_time = 0;
+	float rho_init, max_density = 0;
+	int dense_nodes = 0;
 
-	int src = 0;
-	int dest = 0;
+	for (int turn = 0; turn < 5; turn++) {
 
-	int line = 0;
+		ifstream ip("./input/ca-HepTh-new.csv");
 
-	while (ip.good()) {
-		getline(ip, node_1, ',');
-		getline(ip, node_2, '\n');
+		struct Graph* graph = createGraph();
 
-		stringstream start_node(node_1), end_node(node_2);
+		string node_1;
+		string node_2;
 
-		start_node >> src;
-		end_node >> dest;
+		int src = 0, dest = 0;
 
-		if (line < 2)
-			line++;
+		int line = 0;
 
-		if (line == 2 && !node_1.empty()) {
-			addEdge(graph, src, dest);
-			graph->E++;
+		while (ip.good()) {
+			getline(ip, node_1, ',');
+			getline(ip, node_2, '\n');
+
+			stringstream start_node(node_1), end_node(node_2);
+
+			start_node >> src;
+			end_node >> dest;
+
+			if (line < 2)
+				line++;
+
+			if (line == 2 && !node_1.empty()) {
+				addEdge(graph, src, dest);
+				graph->E++;
+			}
 		}
+
+//	printGraph(graph);
+		calcDensity(graph->E, NO_OF_VERTICES, &rho_init);
+		init_vertexFlags(graph);
+
+		auto start = chrono::steady_clock::now();
+		max_density = maxDensity(graph, rho_init);
+		auto end = chrono::steady_clock::now();
+
+		avg_elapsed_time += chrono::duration_cast<chrono::microseconds>(end - start).count();
+
+		if (turn == 0) {
+			cout << "Initial Density: " << rho_init << endl
+					 << "-----------------------------" << endl
+					 << "VERTICES OF DENSEST COMPONENT" << endl
+					 << "-----------------------------" << endl;
+			dense_nodes = densestComponentVertices(graph);
+			cout << "-----------------" << endl
+					 << "DENSEST COMPONENT" << endl
+					 << "-----------------" << endl;
+			densestComponent(graph);
+		}
+		deallocateGraph(graph);
+
+		ip.close();
 	}
 
-	calcDensity(graph->E, NO_OF_VERTICES, &rho_init);
-	init_vertexFlags(graph);
+	cout << "---------------------------------------" << endl
+			 << "Number of nodes in densest component: " << dense_nodes << endl
+			 << "Density of densest component: " << max_density << endl
+	     << "Average Elapsed time in microseconds : " << avg_elapsed_time << " ms" << endl
+			 << "---------------------------------------" << endl;
 
-	cout << "Initial Density:" << rho_init << endl;
-
-	auto start = chrono::steady_clock::now();
-	maxDensity(graph, rho_init);
-	auto end = chrono::steady_clock::now();
-
-	cout << "Elapsed time in nanoseconds : "
-			 << chrono::duration_cast<chrono::nanoseconds>(end - start).count()
-			 << " ns" << endl;
-
-	densestComponent(graph);
-
-	deallocateGraph(graph);
-
-	ip.close();
 	exit(0);
 }
