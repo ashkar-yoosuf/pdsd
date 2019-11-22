@@ -2,23 +2,29 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <unordered_map>
+#include <unordered_set>
+#include <map>
+#include <iterator>
+#include <omp.h>
 
 using namespace std;
 
-#define NO_OF_VERTICES 4039
-#define EPSILON 0.1
+#define EPSILON 0.5
 #define approxFactor(EPSILON) (2 + 2 * EPSILON)
+#define TURNS 1
+#define NUM_THREADS 2
 
 struct Graph
 {
+	typedef array<int, 2> ar;
+	typedef unordered_map<int, ar*> map_type;
+	typedef unordered_map<int, map_type*> super_map;
+	super_map* sm;
+	unordered_map<int, int>* degrees;
 	int V;
 	int E;
 	int flag;
-	int** flags;
-	int** arrayOfArrays;
-	int* degrees;
-	int* capacities;
-	int* failed_V_arr;
 };
 
 struct GraphTilde
@@ -27,116 +33,119 @@ struct GraphTilde
 	int E;
 };
 
-inline void edgeMemAlloc(int **arr, int index, int value, int *degree, int *capacity) {
+inline void push(struct Graph* graph, int pos, int value) {
 
-	if (*capacity != 0) {
-		*arr = (int *) realloc(*arr, ((*capacity + 1) * sizeof(int)));
-	} else {
-		*arr = (int *) malloc(sizeof(int));
-	}
+	auto it = graph->sm->find(pos);
 
-	*capacity = (*capacity + 1);
-	(*arr)[index] = value;
-	*degree = *degree + 1;
+	if (it != graph->sm->end()) {
 
-}
+		auto itt = graph->sm->at(pos)->find(value);
 
-inline void push(int **arr, int index, int value, int *degree, int *capacity, int same_node, bool first) {
+		if (itt != graph->sm->at(pos)->end()) {
 
-	if (same_node) {
+			Graph::ar* flag_subDeg = graph->sm->at(pos)->at(value);
+			(*flag_subDeg)[1]++;
 
-		if (first) {
-			edgeMemAlloc(arr, index, value, degree, capacity);
 		} else {
-			*degree = *degree + 1;
+
+			auto* ar = new Graph::ar();
+			(*ar)[0] = 0; (*ar)[1] = 1;
+			graph->sm->at(pos)->emplace(make_pair(value, ar));
+
 		}
 
+		graph->degrees->at(pos)++;
+
 	} else {
-		edgeMemAlloc(arr, index, value, degree, capacity);
+
+		auto* mt = new Graph::map_type();
+		auto* ar = new Graph::ar();
+		(*ar)[0] = 0; (*ar)[1] = 1;
+		graph->sm->emplace(make_pair(pos, mt));
+		graph->sm->at(pos)->emplace(make_pair(value, ar));
+		graph->degrees->insert({pos, 1});
+
 	}
 }
 
 void addEdge(struct Graph* graph, int src, int dest) {
 
-	bool same_node { false };
+	push(graph, src,  dest);
+	push(graph, dest, src);
 
-	if (src == dest)
-		same_node = true;
+}
 
-	push(&(graph->arrayOfArrays[src]), graph->capacities[src], dest, &(graph->degrees[src]),
-			&(graph->capacities[src]), same_node, true);
-	push(&(graph->arrayOfArrays[dest]), graph->capacities[dest], src, &(graph->degrees[dest]),
-			&(graph->capacities[dest]), same_node, false);
+inline void partitionGraph(unordered_map<int, bool>* active_I, unordered_map<int, bool>* active_II, unordered_set<int>* active, int src, int dest, bool* inserted_I, bool* inserted_II) {
+
+	if (active->find(src) == active->end() || active->find(dest) == active->end()) {
+		if (*inserted_II) {
+			if (active->find(src) == active->end() && active->find(dest) != active->end())
+				active_I->insert({src, true});
+			else if (active->find(src) != active->end() && active->find(dest) == active->end())
+				active_I->insert({dest, true});
+			else {
+				active_I->insert({dest, true});
+				active_I->insert({src, true});
+			}
+			*inserted_II = false;
+			*inserted_I = true;
+		} else if (*inserted_I) {
+			if (active->find(src) == active->end() && active->find(dest) != active->end())
+				active_II->insert({src, true});
+			else if (active->find(src) != active->end() && active->find(dest) == active->end())
+				active_II->insert({dest, true});
+			else {
+				active_II->insert({dest, true});
+				active_II->insert({src, true});
+			}
+			*inserted_I = false;
+			*inserted_II = true;
+		}
+	}
+	active->insert(src);
+	active->insert(dest);
 
 }
 
 struct Graph* createGraph() {
 
-	auto* graph =
-			(struct Graph*) malloc(sizeof(struct Graph));
-
-	graph->V = NO_OF_VERTICES;
-
+	static auto* graph = new Graph();
+	graph->V = 0;
 	graph->E = 0;
-
 	graph->flag = -1;
+	graph->sm = new Graph::super_map();
+	graph->degrees = new unordered_map<int, int>();
 
-	graph->arrayOfArrays =
-			(int **) malloc(NO_OF_VERTICES * sizeof(*(graph->arrayOfArrays)));
-
-	graph->flags =
-			(int **) malloc(NO_OF_VERTICES * sizeof(*(graph->flags)));
-
-	graph->degrees =
-			(int *) malloc(NO_OF_VERTICES * sizeof(*(graph->degrees)));
-
-	graph->capacities =
-			(int *) malloc(NO_OF_VERTICES * sizeof(*(graph->capacities)));
-
-
-	graph->failed_V_arr =
-			(int *) malloc(NO_OF_VERTICES* sizeof(int));
-
-	int i;
-	for (i = 0; i < NO_OF_VERTICES; ++i) {
-		graph->degrees[i] = 0;
-		graph->capacities[i] = 0;
-		graph->failed_V_arr[i] = 0;
-	}
 	return graph;
-
 }
 
 struct GraphTilde* createGraphTilde(struct Graph* graph) {
 
-	auto* graph_tilde =
-			(struct GraphTilde*) malloc(sizeof(struct GraphTilde));
-
-	graph_tilde->V = NO_OF_VERTICES;
-
+	auto* graph_tilde = new GraphTilde();
+	graph_tilde->V = graph->V;
 	graph_tilde->E = graph->E;
 
 	return graph_tilde;
 
 }
 
-void printGraph(struct Graph* graph) {
-
-	for (int v = 0; v < NO_OF_VERTICES; ++v)
-	{
-		if (graph->capacities[v] != 0)
-		{
-			cout << "[" << v << "] --> [";
-			for (int i = 0; i < graph->capacities[v]; ++i)
-			{
-				if (i != graph->capacities[v] - 1)
-					cout << graph->arrayOfArrays[v][i] << ",";
-				else
-					cout << graph->arrayOfArrays[v][i] << "] | degree: " << graph->degrees[v] << endl;
-			}
-		}
-	}
-}
+//void printGraph(struct Graph* graph) {
+//
+//	for (int v = 0; v < NO_OF_VERTICES; ++v)
+//	{
+//		if (graph->capacities[v] != 0)
+//		{
+//			cout << "[" << v << "] --> [";
+//			for (int i = 0; i < graph->capacities[v]; ++i)
+//			{
+//				if (i != graph->capacities[v] - 1)
+//					cout << graph->arrayOfArrays[v][i] << ",";
+//				else
+//					cout << graph->arrayOfArrays[v][i] << "] | degree: " << graph->degrees[v] << endl;
+//			}
+//		}
+//	}
+//}
 
 inline void calcDensity(int num_edges, int num_vertices, float* density) {
 
@@ -153,142 +162,197 @@ inline void assignToTilde(struct Graph* graph, struct GraphTilde* graph_tilde) {
 
 void deallocateGraph(struct Graph* graph) {
 
-	for (int i = 0; i < NO_OF_VERTICES; ++i)
-	{
-		free(graph->arrayOfArrays[i]);
+	for (auto it = graph->sm->begin(); it != graph->sm->end();) {
+
+		Graph::map_type temp = *(graph->sm->at(it->first));
+
+		for (auto itt = temp.begin(); itt != temp.end();){
+
+			delete temp[itt->first];
+			itt = temp.erase(itt);
+
+		}
+
+		delete graph->sm->at(it->first);
+		it = graph->sm->erase(it);
+
 	}
-	free (graph->degrees);
-	free (graph->capacities);
-	free (graph->arrayOfArrays);
-	free (graph->flags);
-	free (graph->failed_V_arr);
-	free (graph);
+
+	delete graph->sm;
+	delete graph->degrees;
+	delete graph;
 
 }
 
 inline void deallocateGraphTilde(struct GraphTilde* graph_tilde) {
 
-	free (graph_tilde);
+	delete graph_tilde;
 
 }
 
-void init_vertexFlags(struct Graph* graph) {
+float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, unordered_map<int, bool> active_I, unordered_map<int, bool> active_II , double rho_init) {
 
-	for (int v = 0; v < NO_OF_VERTICES; v++) {
-		graph->flags[v] = new int[graph->capacities[v]];
-
-		for (int i = 0; i < graph->capacities[v]; i++) {
-			graph->flags[v][i] = 0;
-		}
-	}
-}
-
-inline void removeEdge(struct Graph* graph, int degree_reduction, int target_element, int flagOf_target_element, int v, int v_v) {
-
-	if (flagOf_target_element == 0) {
-		for (int u_u = 0; u_u < graph->capacities[target_element]; u_u++) {
-			if (graph->arrayOfArrays[target_element][u_u] == v) {
-				graph->flags[target_element][u_u] = graph->flag;
-				graph->E--;
-				break;
-			}
-		}
-		graph->degrees[target_element] -= degree_reduction;
-		graph->flags[v][v_v] = graph->flag;
-	}
-
-}
-
-float maxDensity(struct Graph* graph, double rho_init) {
-
-	struct GraphTilde* graph_tilde = createGraphTilde(graph);
-
-	int target_element, flagOf_target_element;
+	int edge_reduction = 0;
 	float current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
 	bool isTildeChanged {false};
 
+	unordered_map <int, bool> current_failed_I;
+	unordered_map <int, bool> current_failed_II;
+
+	int edge_dec[2] = {0, 0};
+	int vertex_dec[2] = {0, 0};
+
 	while (graph->V > 0) {
-		for (int v = 0; v < NO_OF_VERTICES; v++) {
-			if ((graph->failed_V_arr[v] == 0) && (graph->degrees[v] <= approxFactor(EPSILON) * current_graph_rho)) {
-				graph->failed_V_arr[v] = graph->flag;
-				graph->V--;
 
-				for (int v_v = 0; v_v < graph->capacities[v]; v_v++) {
-
-					target_element = graph->arrayOfArrays[v][v_v];
-					flagOf_target_element = graph->flags[v][v_v];
-
-					if (target_element != v) {
-						removeEdge(graph, 1, target_element, flagOf_target_element, v, v_v);
+#pragma omp parallel
+	{
+#pragma omp single
+		{
+#pragma omp task
+			{
+				for (auto it = active_I.begin(); it != active_I.end();) {
+					if (graph->degrees->at(it->first) <= approxFactor(EPSILON) * current_graph_rho) {
+						current_failed_I.insert({it->first, true});
+						vertex_dec[0]--;
+						it = active_I.erase(it);
 					} else {
-						removeEdge(graph, 2, target_element, flagOf_target_element, v, v_v);
+						it++;
 					}
-
 				}
-				graph->degrees[v] = 0;
 			}
-		}
-		calcDensity(graph->E, graph->V, &current_graph_rho);
 
-		if (isTildeChanged) {
-			calcDensity(graph_tilde->E, graph_tilde->V, &current_graphTilde_rho);
-			isTildeChanged = false;
-		}
+			for (auto it = active_II.begin(); it != active_II.end();) {
+				if (graph->degrees->at(it->first) <= approxFactor(EPSILON) * current_graph_rho) {
+					current_failed_II.insert({it->first, true});
+					vertex_dec[1]--;
+					it = active_II.erase(it);
+				} else {
+					it++;
+				}
+			}
 
-		if (current_graph_rho > current_graphTilde_rho) {
-			assignToTilde(graph, graph_tilde);
-			graph->flag--;
-			isTildeChanged = true;
+#pragma omp taskwait
+
+#pragma omp task default(shared) firstprivate(edge_reduction)
+			{
+				for (auto& it: current_failed_I) {
+					Graph::map_type temp = *(graph->sm->at(it.first));
+					for (auto& itt: temp) {
+						Graph::ar* temp_1 = graph->sm->at(it.first)->at(itt.first);
+						Graph::ar* temp_2 = graph->sm->at(itt.first)->at(it.first);
+						if ((*temp_1)[0] == 0 && (*temp_2)[0] == 0) {
+							(*temp_1)[0] = graph->flag;
+							(*temp_2)[0] = graph->flag;
+							edge_reduction = (*temp_1)[1];
+							graph->degrees->at(it.first) -= edge_reduction;
+#pragma omp atomic
+							graph->degrees->at(itt.first) -= edge_reduction;
+							edge_dec[0] -= edge_reduction;
+						}
+					}
+				}
+			}
+
+			for (auto& it: current_failed_II) {
+				Graph::map_type temp = *(graph->sm->at(it.first));
+				for (auto& itt: temp) {
+					Graph::ar* temp_1 = graph->sm->at(it.first)->at(itt.first);
+					Graph::ar* temp_2 = graph->sm->at(itt.first)->at(it.first);
+					if ((*temp_1)[0] == 0 && (*temp_2)[0] == 0) {
+						(*temp_1)[0] = graph->flag;
+						(*temp_2)[0] = graph->flag;
+						edge_reduction = (*temp_1)[1];
+						graph->degrees->at(it.first) -= edge_reduction;
+#pragma omp atomic
+						graph->degrees->at(itt.first) -= edge_reduction;
+						edge_dec[1] -= edge_reduction;
+					}
+				}
+			}
+
+
 		}
 	}
 
-	deallocateGraphTilde(graph_tilde);
+		current_failed_I.clear();
+		current_failed_II.clear();
+
+		graph->V += vertex_dec[0] + vertex_dec[1];
+		graph->E += edge_dec[0] + edge_dec[1];
+
+		vertex_dec[0] = 0, vertex_dec[1] = 0;
+		edge_dec[0] = 0, edge_dec[1] = 0;
+
+		calcDensity(graph->E, graph->V, &current_graph_rho);
+
+		if (isTildeChanged) {
+
+			calcDensity(graph_tilde->E, graph_tilde->V, &current_graphTilde_rho);
+			isTildeChanged = false;
+
+		}
+
+		if (current_graph_rho > current_graphTilde_rho) {
+
+			assignToTilde(graph, graph_tilde);
+			graph->flag--;
+			isTildeChanged = true;
+
+		}
+	}
 
 	return current_graphTilde_rho;
 
 }
 
-void densestComponent(struct Graph* graph) {
+//void densestComponent(struct Graph* graph) {
+//
+//	for (int v = 0; v < NO_OF_VERTICES; v++) {
+//		if (graph->failed_V_arr[v] == graph->flag) {
+//			cout << "[" << v << "] --> |";
+//			for (int i = 0; i < graph->capacities[v]; ++i) {
+//				if (graph->flags[v][i] == graph->flag) {
+//					cout << graph->arrayOfArrays[v][i] << "|";
+//				}
+//			}
+//			cout << endl;
+//		}
+//	}
+//
+//}
 
-	for (int v = 0; v < NO_OF_VERTICES; v++) {
-		if (graph->failed_V_arr[v] == graph->flag) {
-			cout << "[" << v << "] --> |";
-			for (int i = 0; i < graph->capacities[v]; ++i) {
-				if (graph->flags[v][i] == graph->flag) {
-					cout << graph->arrayOfArrays[v][i] << "|";
-				}
-			}
-			cout << endl;
-		}
-	}
-
-}
-
-int densestComponentVertices(struct Graph* graph) {
-
-	int dense_nodes = 0;
-	for (int v = 0; v < NO_OF_VERTICES; v++) {
-		if (graph->failed_V_arr[v] == graph->flag) {
-			dense_nodes++;
-			cout << v << endl;
-		}
-	}
-
-	return dense_nodes;
-
-}
+//int densestComponentVertices(struct Graph* graph) {
+//
+//	int dense_nodes = 0;
+//	for (int v = 0; v < NO_OF_VERTICES; v++) {
+//		if (graph->failed_V_arr[v] == graph->flag) {
+//			dense_nodes++;
+//			cout << v << endl;
+//		}
+//	}
+//
+//	return dense_nodes;
+//
+//}
 
 int main() {
 
-	freopen("./output/facebook_combined(0.1).txt", "w", stdout);
+	freopen("./output_NEW/[4]chn_PARALLELnew.txt", "w", stdout);
 
 	double avg_elapsed_time = 0;
 	float rho_init, max_density = 0;
 	int dense_nodes = 0;
+	bool inserted_I = true, inserted_II = true;
 
-	for (int turn = 0; turn < 5; turn++) {
+	unordered_set<int> active;
+	unordered_map<int, bool> active_I;
+	unordered_map<int, bool> active_II;
 
-		ifstream ip("./input/facebook_combined.csv");
+	omp_set_num_threads(NUM_THREADS);
+
+	for (int turn = 0; turn < TURNS; turn++) {
+
+		ifstream ip("./input_NEW/[4]ca-HepPh-new.csv");
 
 		struct Graph* graph = createGraph();
 
@@ -300,6 +364,7 @@ int main() {
 		int line = 0;
 
 		while (ip.good()) {
+
 			getline(ip, node_1, ',');
 			getline(ip, node_2, '\n');
 
@@ -311,34 +376,46 @@ int main() {
 			if (line < 2)
 				line++;
 
-			if (line == 2 && !node_1.empty()) {
+			if (line == 2 && !node_1.empty() && src != dest) {
+
+				partitionGraph(&active_I, &active_II, &active, src, dest, &inserted_I, &inserted_II);
+
 				addEdge(graph, src, dest);
 				graph->E++;
+
 			}
 		}
 
-//	printGraph(graph);
-		calcDensity(graph->E, NO_OF_VERTICES, &rho_init);
-		init_vertexFlags(graph);
+		active.clear();
+		graph->V = active_I.size() + active_II.size();
+
+		struct GraphTilde* graph_tilde = createGraphTilde(graph);
+
+//		printGraph(graph);
+		calcDensity(graph->E, graph->V, &rho_init);
 
 		auto start = chrono::steady_clock::now();
-		max_density = maxDensity(graph, rho_init);
+		max_density = maxDensity(graph, graph_tilde, active_I, active_II, rho_init);
 		auto end = chrono::steady_clock::now();
 
 		avg_elapsed_time += chrono::duration_cast<chrono::microseconds>(end - start).count();
 
 		if (turn == 0) {
+
 			cout << "Initial Density: " << rho_init << endl
 					 << "-----------------------------" << endl
 					 << "VERTICES OF DENSEST COMPONENT" << endl
 					 << "-----------------------------" << endl;
-			dense_nodes = densestComponentVertices(graph);
+//			dense_nodes = densestComponentVertices(graph);
 			cout << "-----------------" << endl
 					 << "DENSEST COMPONENT" << endl
 					 << "-----------------" << endl;
-			densestComponent(graph);
+//			densestComponent(graph);
+
 		}
+
 		deallocateGraph(graph);
+		deallocateGraphTilde(graph_tilde);
 
 		ip.close();
 	}
@@ -346,7 +423,7 @@ int main() {
 	cout << "---------------------------------------" << endl
 			 << "Number of nodes in densest component: " << dense_nodes << endl
 			 << "Density of densest component: " << max_density << endl
-	     << "Average Elapsed time in microseconds : " << avg_elapsed_time << " μs" << endl
+			 << "Average Elapsed time in microseconds : " << avg_elapsed_time / (float) TURNS << " μs" << endl
 			 << "---------------------------------------" << endl;
 
 	exit(0);
