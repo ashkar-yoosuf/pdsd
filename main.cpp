@@ -3,17 +3,15 @@
 #include <sstream>
 #include <chrono>
 #include <unordered_map>
-#include <unordered_set>
 #include <map>
 #include <iterator>
-#include <omp.h>
 
 using namespace std;
 
 #define EPSILON 0.5
 #define approxFactor(EPSILON) (2 + 2 * EPSILON)
 #define TURNS 1
-#define NUM_THREADS 4
+
 
 struct Graph
 {
@@ -68,34 +66,29 @@ inline void push(struct Graph* graph, int pos, int value) {
 	}
 }
 
+//inline void push(struct Graph* graph, int pos, int value) {
+//
+//	auto it = graph->sm.find(pos);
+//
+//	if (it != graph->sm.end()) {
+//
+//		graph->sm[pos]->insert({value, 0});
+//		graph->degrees[pos]++;
+//
+//	} else {
+//
+//		auto* mt = new Graph::map_type();
+//		graph->sm.emplace(make_pair(pos, mt));
+//		graph->sm[pos]->emplace(make_pair(value, 0));
+//		graph->degrees.insert({pos, 1});
+//
+//	}
+//}
+
 void addEdge(struct Graph* graph, int src, int dest) {
 
 	push(graph, src,  dest);
 	push(graph, dest, src);
-
-}
-
-inline void partitionGraph(unordered_map<int, bool>* active_I, unordered_map<int, bool>* active_II, unordered_map<int, bool>* active_III, unordered_map<int, bool>* active_IV, unordered_set<int>* active, int src, int dest) {
-
-	unordered_set<int> active_deref = *active;
-	auto it_end = active_deref.end();
-
-	for (auto it = active_deref.begin(); it != it_end;) {
-		active_I->insert({*it, true});
-		it = active_deref.erase(it);
-		if (it != it_end) {
-			active_II->insert({*it, true});
-			it = active_deref.erase(it);
-			if (it != it_end) {
-				active_III->insert({*it, true});
-				it = active_deref.erase(it);
-				if (it != it_end) {
-					active_IV->insert({*it, true});
-					it = active_deref.erase(it);
-				}
-			}
-		}
-	}
 
 }
 
@@ -114,7 +107,7 @@ struct Graph* createGraph() {
 struct GraphTilde* createGraphTilde(struct Graph* graph) {
 
 	auto* graph_tilde = new GraphTilde();
-	graph_tilde->V = graph->V;
+	graph_tilde->V = 0;
 	graph_tilde->E = graph->E;
 
 	return graph_tilde;
@@ -182,166 +175,54 @@ inline void deallocateGraphTilde(struct GraphTilde* graph_tilde) {
 
 }
 
-float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, unordered_map<int, bool> active_I, unordered_map<int, bool> active_II, unordered_map<int, bool> active_III, unordered_map<int, bool> active_IV , double rho_init) {
+float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, unordered_map<int, bool> active , double rho_init) {
 
 	int edge_reduction = 0;
 	float current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
 	bool isTildeChanged {false};
 
-	unordered_map <int, bool> current_failed_I;
-	unordered_map <int, bool> current_failed_II;
-	unordered_map <int, bool> current_failed_III;
-	unordered_map <int, bool> current_failed_IV;
-
-	int edge_dec[4] = {0, 0, 0, 0};
-	int vertex_dec[4] = {0, 0, 0, 0};
+	unordered_map <int, bool> current_failed;
 
 	while (graph->V > 0) {
 
-#pragma omp parallel
-		{
-#pragma omp single
-			{
-#pragma omp task
-				{
-					for (auto it = active_I.begin(); it != active_I.end();) {
-						if (graph->degrees->at(it->first) <= approxFactor(EPSILON) * current_graph_rho) {
-							current_failed_I.insert({it->first, true});
-							vertex_dec[0]--;
-							it = active_I.erase(it);
-						} else {
-							it++;
-						}
-					}
-				}
+		for (auto it = active.begin(); it != active.end();) {
 
-#pragma omp task
-				{
-					for (auto it = active_II.begin(); it != active_II.end();) {
-						if (graph->degrees->at(it->first) <= approxFactor(EPSILON) * current_graph_rho) {
-							current_failed_II.insert({it->first, true});
-							vertex_dec[1]--;
-							it = active_II.erase(it);
-						} else {
-							it++;
-						}
-					}
-				}
+			if (graph->degrees->at(it->first) <= approxFactor(EPSILON) * current_graph_rho) {
 
-#pragma omp task
-				{
-					for (auto it = active_III.begin(); it != active_III.end();) {
-						if (graph->degrees->at(it->first) <= approxFactor(EPSILON) * current_graph_rho) {
-							current_failed_III.insert({it->first, true});
-							vertex_dec[2]--;
-							it = active_III.erase(it);
-						} else {
-							it++;
-						}
-					}
-				}
+				current_failed.insert({it->first, true});
+				graph->V--;
+				it = active.erase(it);
 
-				for (auto it = active_IV.begin(); it != active_IV.end();) {
-					if (graph->degrees->at(it->first) <= approxFactor(EPSILON) * current_graph_rho) {
-						current_failed_IV.insert({it->first, true});
-						vertex_dec[3]--;
-						it = active_IV.erase(it);
-					} else {
-						it++;
-					}
-				}
+			} else {
 
-#pragma omp taskwait
-
-#pragma omp task default(shared) firstprivate(edge_reduction)
-				{
-					for (auto& it: current_failed_I) {
-						Graph::map_type temp = *(graph->sm->at(it.first));
-						for (auto& itt: temp) {
-							Graph::ar* temp_1 = graph->sm->at(it.first)->at(itt.first);
-							Graph::ar* temp_2 = graph->sm->at(itt.first)->at(it.first);
-							if ((*temp_1)[0] == 0 && (*temp_2)[0] == 0) {
-								(*temp_1)[0] = graph->flag;
-								(*temp_2)[0] = graph->flag;
-								edge_reduction = (*temp_1)[1];
-								graph->degrees->at(it.first) -= edge_reduction;
-#pragma omp atomic
-								graph->degrees->at(itt.first) -= edge_reduction;
-								edge_dec[0] -= edge_reduction;
-							}
-						}
-					}
-				}
-
-#pragma omp task default(shared) firstprivate(edge_reduction)
-				{
-					for (auto& it: current_failed_II) {
-						Graph::map_type temp = *(graph->sm->at(it.first));
-						for (auto& itt: temp) {
-							Graph::ar* temp_1 = graph->sm->at(it.first)->at(itt.first);
-							Graph::ar* temp_2 = graph->sm->at(itt.first)->at(it.first);
-							if ((*temp_1)[0] == 0 && (*temp_2)[0] == 0) {
-								(*temp_1)[0] = graph->flag;
-								(*temp_2)[0] = graph->flag;
-								edge_reduction = (*temp_1)[1];
-								graph->degrees->at(it.first) -= edge_reduction;
-#pragma omp atomic
-								graph->degrees->at(itt.first) -= edge_reduction;
-								edge_dec[1] -= edge_reduction;
-							}
-						}
-					}
-				}
-
-#pragma omp task default(shared) firstprivate(edge_reduction)
-				{
-					for (auto& it: current_failed_III) {
-						Graph::map_type temp = *(graph->sm->at(it.first));
-						for (auto& itt: temp) {
-							Graph::ar* temp_1 = graph->sm->at(it.first)->at(itt.first);
-							Graph::ar* temp_2 = graph->sm->at(itt.first)->at(it.first);
-							if ((*temp_1)[0] == 0 && (*temp_2)[0] == 0) {
-								(*temp_1)[0] = graph->flag;
-								(*temp_2)[0] = graph->flag;
-								edge_reduction = (*temp_1)[1];
-								graph->degrees->at(it.first) -= edge_reduction;
-#pragma omp atomic
-								graph->degrees->at(itt.first) -= edge_reduction;
-								edge_dec[2] -= edge_reduction;
-							}
-						}
-					}
-				}
-
-				for (auto& it: current_failed_IV) {
-					Graph::map_type temp = *(graph->sm->at(it.first));
-					for (auto& itt: temp) {
-						Graph::ar* temp_1 = graph->sm->at(it.first)->at(itt.first);
-						Graph::ar* temp_2 = graph->sm->at(itt.first)->at(it.first);
-						if ((*temp_1)[0] == 0 && (*temp_2)[0] == 0) {
-							(*temp_1)[0] = graph->flag;
-							(*temp_2)[0] = graph->flag;
-							edge_reduction = (*temp_1)[1];
-							graph->degrees->at(it.first) -= edge_reduction;
-#pragma omp atomic
-							graph->degrees->at(itt.first) -= edge_reduction;
-							edge_dec[3] -= edge_reduction;
-						}
-					}
-				}
-
+				it++;
 
 			}
 		}
 
-		current_failed_I.clear();
-		current_failed_II.clear();
+		for (auto& it: current_failed) {
 
-		graph->V += vertex_dec[0] + vertex_dec[1] + vertex_dec[2] + vertex_dec[3];
-		graph->E += edge_dec[0] + edge_dec[1] + edge_dec[2] + edge_dec[3];
+			Graph::map_type temp = *(graph->sm->at(it.first));
 
-		vertex_dec[0] = 0, vertex_dec[1] = 0, vertex_dec[2] = 0, vertex_dec[3] = 0;
-		edge_dec[0] = 0, edge_dec[1] = 0, edge_dec[2] = 0, edge_dec[3] = 0;
+			for (auto& itt: temp) {
+
+				Graph::ar* temp_1 = graph->sm->at(it.first)->at(itt.first);
+				Graph::ar* temp_2 = graph->sm->at(itt.first)->at(it.first);
+
+				if ((*temp_1)[0] == 0 && (*temp_2)[0] == 0) {
+
+					(*temp_1)[0] = graph->flag;
+					(*temp_2)[0] = graph->flag;
+					edge_reduction = (*temp_1)[1];
+					graph->degrees->at(it.first) -= edge_reduction;
+					graph->degrees->at(itt.first) -= edge_reduction;
+					graph->E -= edge_reduction;
+
+				}
+			}
+		}
+
+		current_failed.clear();
 
 		calcDensity(graph->E, graph->V, &current_graph_rho);
 
@@ -397,23 +278,18 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, unordered_
 
 int main() {
 
-	freopen("./output_NEW/[3]fc_4.txt", "w", stdout);
+	freopen("/home/ashkar/Documents/Graph_Output/slj1_SERIAL.txt", "w", stdout);
 
 	double avg_elapsed_time = 0;
 	float rho_init, max_density = 0;
 	int dense_nodes = 0;
 
-	unordered_set<int> active;
-	unordered_map<int, bool> active_I;
-	unordered_map<int, bool> active_II;
-	unordered_map<int, bool> active_III;
-	unordered_map<int, bool> active_IV;
-
-	omp_set_num_threads(NUM_THREADS);
+	unordered_map<int, bool> active;
 
 	for (int turn = 0; turn < TURNS; turn++) {
 
-		ifstream ip("./input_NEW/[3]facebook_combined.csv");
+//		ifstream ip("./input/as-skitter_reFormatted.csv");
+		ifstream ip("/home/ashkar/Documents/Graph_Input/soc-LiveJournal1.csv");
 
 		struct Graph* graph = createGraph();
 
@@ -439,28 +315,22 @@ int main() {
 
 			if (line == 2 && !node_1.empty() && src != dest) {
 
-				active.insert(src);
-				active.insert(dest);
-
+				active.insert({src, true});
+				active.insert({dest, true});
 				addEdge(graph, src, dest);
 				graph->E++;
 
 			}
 		}
 
-		partitionGraph(&active_I, &active_II, &active_III, &active_IV, &active, src, dest);
-
-		active.clear();
-
-		graph->V = active_I.size() + active_II.size() + active_III.size() + active_IV.size();
-
 		struct GraphTilde* graph_tilde = createGraphTilde(graph);
+		graph->V = active.size();
 
 //		printGraph(graph);
 		calcDensity(graph->E, graph->V, &rho_init);
 
 		auto start = chrono::steady_clock::now();
-		max_density = maxDensity(graph, graph_tilde, active_I, active_II, active_III, active_IV, rho_init);
+		max_density = maxDensity(graph, graph_tilde, active, rho_init);
 		auto end = chrono::steady_clock::now();
 
 		avg_elapsed_time += chrono::duration_cast<chrono::microseconds>(end - start).count();
