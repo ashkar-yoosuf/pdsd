@@ -16,7 +16,7 @@ using namespace std;
 typedef unordered_map<int, int> map_type;
 typedef unordered_map<int, map_type*> super_map;
 typedef unordered_set<int> set_type;
-typedef array<unordered_set<int>*, NUM_THREADS> nodes_track;
+typedef array<set_type*, NUM_THREADS> nodes_track;
 
 struct Graph
 {
