@@ -219,7 +219,6 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 
 							*temp_2 = 0;
 							edge_reduction = temp.at(itt.first);
-							graph->degrees->at(it) -= edge_reduction;
 							(*edge_dec)[_id] -= edge_reduction;
 							__sync_sub_and_fetch(&(graph->degrees->at(itt.first)), edge_reduction);
 
