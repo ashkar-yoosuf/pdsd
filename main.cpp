@@ -298,7 +298,7 @@ int main() {
 		auto* fails = new nodes_track();
 		auto* active_ar = new nodes_track();
 
-		ifstream ip("./input_NEW/[3]facebook_combined.csv");
+		ifstream ip("./input/[3]facebook_combined.csv");
 
 		struct Graph* graph = createGraph();
 
