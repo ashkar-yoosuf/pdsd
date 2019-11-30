@@ -16,7 +16,7 @@ using namespace std;
 typedef unordered_map<int, int> map_type;
 typedef unordered_map<int, map_type*> super_map;
 typedef unordered_set<int> set_type;
-typedef array<unordered_set<int>*, NUM_THREADS> nodes_track;
+typedef array<set_type*, NUM_THREADS> nodes_track;
 
 struct Graph
 {
@@ -159,6 +159,8 @@ inline void deallocateMinor(nodes_track* _actives, nodes_track* _fails) {
 float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_track* _actives, nodes_track* _fails, double rho_init) {
 
 	int edge_reduction = 0, id = 0, iid = 0;
+	int* temp_1, * temp_2;
+	map_type temp;
 	float current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
 	bool isTildeChanged {false};
 
@@ -196,7 +198,7 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 
 #pragma omp parallel
 		{
-#pragma omp task default(shared) firstprivate(edge_reduction)
+#pragma omp task default(shared) firstprivate(edge_reduction, temp, temp_1, temp_2)
 			{
 				int _id;
 #pragma omp critical
@@ -206,12 +208,12 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 				}
 				for (auto& it: *(*_fails)[_id]) {
 
-					map_type temp = *(graph->sm->at(it));
+					temp = *(graph->sm->at(it));
 
 					for (auto& itt: temp) {
 
-						int* temp_1 = &(graph->sm->at(it)->at(itt.first));
-						int* temp_2 = &(graph->sm->at(itt.first)->at(it));
+						temp_1 = &(graph->sm->at(it)->at(itt.first));
+						temp_2 = &(graph->sm->at(itt.first)->at(it));
 
 						if (*temp_1 != 0 && *temp_2 != 0) {
 
@@ -298,7 +300,7 @@ int main() {
 		auto* fails = new nodes_track();
 		auto* active_ar = new nodes_track();
 
-		ifstream ip("./input_NEW/[3]facebook_combined.csv");
+		ifstream ip("./input/[3]facebook_combined.csv");
 
 		struct Graph* graph = createGraph();
 
