@@ -11,35 +11,35 @@ using namespace std;
 
 #define EPSILON 0.5
 #define approxFactor(EPSILON) (2 + 2 * EPSILON)
-#define NUM_THREADS 2
+#define NUM_THREADS 1
 
-typedef unordered_map<int, int> map_type;
-typedef unordered_map<int, map_type*> super_map;
-typedef unordered_set<int> set_type;
+typedef unordered_map<unsigned int, unsigned int> map_type;
+typedef unordered_map<unsigned int, map_type*> super_map;
+typedef unordered_set<unsigned int> set_type;
 typedef array<set_type*, NUM_THREADS> nodes_track;
 
 struct Graph
 {
 	super_map* sm;
-	unordered_map<int, int>* degrees;
-	int V;
-	int E;
+	map_type* degrees;
+	unsigned int V;
+	unsigned long long E;
 };
 
 struct GraphTilde
 {
-	int V;
-	int E;
+	unsigned int V;
+	unsigned long long E;
 };
 
-inline void partitionNodes(unordered_set<int>* active, nodes_track* _actives, nodes_track* _fails)
+inline void partitionNodes(set_type* active, nodes_track* _actives, nodes_track* _fails)
 {
 	for (int i = 0; i < NUM_THREADS; i++) {
 		(*_actives)[i] = new ::set_type();
 		(*_fails)[i] = new ::set_type();
 	}
 
-	unordered_set<int> active_deref = *active;
+	set_type active_deref = *active;
 	auto it_end = active_deref.end();
 
 	for (auto it = active_deref.begin(); it != it_end;) {
@@ -52,7 +52,7 @@ inline void partitionNodes(unordered_set<int>* active, nodes_track* _actives, no
 	}
 }
 
-inline void push(struct Graph* graph, int pos, int value) {
+inline void push(struct Graph* graph, unsigned int pos, unsigned int value) {
 
 	auto it = graph->sm->find(pos);
 
@@ -82,7 +82,7 @@ inline void push(struct Graph* graph, int pos, int value) {
 	}
 }
 
-void addEdge(struct Graph* graph, int src, int dest) {
+void addEdge(struct Graph* graph, unsigned int src, unsigned int dest) {
 
 	push(graph, src,  dest);
 	push(graph, dest, src);
@@ -110,7 +110,7 @@ struct GraphTilde* createGraphTilde(struct Graph* graph) {
 
 }
 
-inline void calcDensity(int num_edges, int num_vertices, float* density) {
+inline void calcDensity(unsigned long long num_edges, unsigned int num_vertices, float* density) {
 
 	*density = (double) num_edges/  (double) num_vertices;
 
@@ -158,8 +158,8 @@ inline void deallocateMinor(nodes_track* _actives, nodes_track* _fails) {
 
 float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_track* _actives, nodes_track* _fails, double rho_init) {
 
-	int edge_reduction = 0, id = 0, iid = 0;
-	int* temp_1, * temp_2;
+	unsigned int edge_reduction = 0, id = 0, iid = 0;
+	unsigned int* temp_1, * temp_2;
 	map_type temp;
 	float current_graph_rho = rho_init, current_graphTilde_rho = rho_init;
 	bool isTildeChanged {false};
@@ -206,7 +206,9 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 					_id = iid;
 					iid++;
 				}
-				for (auto& it: *(*_fails)[_id]) {
+
+				set_type st = *(*_fails)[_id];
+				for (auto& it: st) {
 
 					temp = *(graph->sm->at(it));
 
@@ -269,7 +271,7 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 
 int densestComponent(nodes_track* _fails) {
 
-	int num_nodes = 0;
+	unsigned int num_nodes = 0;
 	for (int i = 0; i < NUM_THREADS; i++) {
 		num_nodes += (*_fails)[i]->size();
 		for (auto& it: *(*_fails)[i]) {
@@ -282,7 +284,7 @@ int densestComponent(nodes_track* _fails) {
 
 int main() {
 
-	int max_threads = omp_get_max_threads();
+	unsigned int max_threads = omp_get_max_threads();
 
 	cout << "max threads: " << max_threads << endl;
 	cout << "requested threads: " << NUM_THREADS << endl;
@@ -291,11 +293,11 @@ int main() {
 
 		double elapsed_time = 0;
 		float rho_init, max_density = 0;
-		int dense_nodes = 0;
+		unsigned int dense_nodes = 0;
 
 		omp_set_num_threads(NUM_THREADS);
 
-		unordered_set<int> active;
+		set_type active;
 		auto* fails = new nodes_track();
 		auto* active_ar = new nodes_track();
 
@@ -306,7 +308,7 @@ int main() {
 		string node_1;
 		string node_2;
 
-		int src = 0, dest = 0;
+		unsigned int src = 0, dest = 0;
 
 		int line = 0;
 
