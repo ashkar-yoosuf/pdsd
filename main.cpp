@@ -11,6 +11,8 @@ using namespace std;
 
 #define EPSILON 0.5
 #define approxFactor(EPSILON) (2 + 2 * EPSILON)
+#define removeFactor(EPSILON) (EPSILON / (1 + EPSILON))
+#define k 20
 #define NUM_THREADS 4
 
 typedef unordered_map<unsigned int, unsigned int> map_type;
@@ -18,6 +20,7 @@ typedef unordered_map<unsigned int, map_type*> super_map;
 typedef unordered_set<unsigned int> set_type;
 typedef array<set_type*, NUM_THREADS> nodes_track;
 typedef array<int, NUM_THREADS> decrement_ar;
+typedef array<unsigned int, NUM_THREADS> removal_track;
 
 struct Graph
 {
@@ -169,6 +172,7 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 
 	auto* edge_dec = new decrement_ar();
 	auto* vertex_dec = new decrement_ar();
+	auto* removal_tr = new removal_track();
 
 	while (graph->V > 0) {
 
@@ -184,20 +188,29 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 				}
 
 				set_type* st = (*_actives)[_id];
+				unsigned int local_nodes = (*_actives)[_id]->size();
+
 				for (auto it = st->begin(); it != st->end();) {
 
-					if (graph->degrees->at(*it) <= approxFactor(EPSILON) * current_graph_rho) {
+					if ((*removal_tr)[_id] < removeFactor(EPSILON) * local_nodes) {
 
-						(*_fails)[_id]->insert(*it);
-						active->at(*it) = graph->flag;
-						(*vertex_dec)[_id]--;
-						it = st->erase(it);
+						if (graph->degrees->at(*it) <= approxFactor(EPSILON) * current_graph_rho) {
 
-					} else {
+							(*_fails)[_id]->insert(*it);
+							active->at(*it) = graph->flag;
+							(*vertex_dec)[_id]--;
+							it = st->erase(it);
+							(*removal_tr)[_id]++;
 
-						it++;
+						} else {
 
-					}
+							it++;
+
+						}
+
+					} else
+						break;
+
 				}
 			}
 		}
@@ -243,6 +256,7 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 			(*vertex_dec)[i] = 0;
 			graph->E += (*edge_dec)[i];
 			(*edge_dec)[i] = 0;
+			(*removal_tr)[i] = 0;
 			(*_fails)[i]->clear();
 		}
 
@@ -255,7 +269,7 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 
 		}
 
-		if (current_graph_rho > current_graphTilde_rho) {
+		if (graph->V >= k && current_graph_rho > current_graphTilde_rho) {
 
 			assignToTilde(graph, graph_tilde);
 			graph->flag++;
@@ -266,6 +280,7 @@ float maxDensity(struct Graph* graph, struct GraphTilde* graph_tilde, nodes_trac
 
 	delete edge_dec;
 	delete vertex_dec;
+	delete removal_tr;
 
 	return current_graphTilde_rho;
 
@@ -304,7 +319,7 @@ int main() {
 		auto* fails = new nodes_track();
 		auto* active_ar = new nodes_track();
 
-		ifstream ip("./input_NEW/[3]facebook_combined.csv");
+		ifstream ip("./input/[3]facebook_combined.csv");
 
 		struct Graph* graph = createGraph();
 
@@ -354,7 +369,7 @@ int main() {
 		elapsed_time += chrono::duration_cast<chrono::microseconds>(end - start).count();
 
 		cout << "Initial Density: " << rho_init << endl;
-	 	cout << "-----------------" << endl
+		cout << "-----------------" << endl
 				 << "DENSEST COMPONENT" << endl
 				 << "-----------------" << endl;
 		dense_nodes = densestComponent(&active, graph);
