@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="ParAlgo"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="ParAlgo">
+				<Option output="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/ParAlgo" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/../../../../../../include/c++/6.5.0"/>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/../../../../../../include/c++/6.5.0/x86_64-apple-darwin18.7.0"/>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/../../../../../../include/c++/6.5.0/backward"/>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/include"/>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/include-fixed"/>
+					<Add directory="/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/usr/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 ParAlgo"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="ParAlgo/fast">
+				<Option output="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/ParAlgo" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/../../../../../../include/c++/6.5.0"/>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/../../../../../../include/c++/6.5.0/x86_64-apple-darwin18.7.0"/>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/../../../../../../include/c++/6.5.0/backward"/>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/include"/>
+					<Add directory="/usr/local/Cellar/gcc@6/6.5.0_3/lib/gcc/6/gcc/x86_64-apple-darwin18.7.0/6.5.0/include-fixed"/>
+					<Add directory="/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/usr/include"/>
+					<Add directory="/Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk/System/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 ParAlgo/fast"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/main.cpp">
+			<Option target="ParAlgo"/>
+		</Unit>
+		<Unit filename="/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

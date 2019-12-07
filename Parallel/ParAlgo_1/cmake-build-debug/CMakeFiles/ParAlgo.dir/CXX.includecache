@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/main.cpp
+iostream
+-
+fstream
+-
+sstream
+-
+chrono
+-
+unordered_map
+-
+unordered_set
+-
+iterator
+-
+vector
+-
+omp.h
+-
+

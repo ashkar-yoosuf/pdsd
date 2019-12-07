@@ -1,0 +1,7 @@
+/Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/bin/gcc-6 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-6 -G "CodeBlocks - Unix Makefiles" /Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo
+-- Found OpenMP_C: -fopenmp  
+-- Found OpenMP_CXX: -fopenmp  
+-- Found OpenMP: TRUE   
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Users/conceptscorp/Documents/FYP/pdsd/Parallel/ParAlgo/cmake-build-debug
